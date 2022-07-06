@@ -1,0 +1,470 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_applovin_max/banner.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:currency_picker/currency_picker.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'AdsUtils.dart';
+import 'package:flutter_applovin_max/flutter_applovin_max.dart';
+import 'package:flutter_applovin_max/banner.dart';
+
+class CurrencyExchange extends StatefulWidget {
+  const CurrencyExchange({Key? key}) : super(key: key);
+  @override
+  State<CurrencyExchange> createState() => _CurrencyExchangeState();
+}
+
+class _CurrencyExchangeState extends State<CurrencyExchange> {
+  var amountnew;
+
+  var rate;
+
+  var resultamount;
+
+  var currencycodes;
+
+  var secondCurrencyCodes;
+
+  var currencyNamesPicker;
+
+
+
+  Future<InitializationStatus> _initGoogleMobileAds() {
+    // TODO: Initialize Google Mobile Ads SDK
+    return MobileAds.instance.initialize();
+  }
+
+  late BannerAd _bannerAd;
+  // TODO: Add _isBannerAdReady
+  bool _isBannerAdReady = false;
+  bool dataBody = true;
+
+  static final Map<String, String> _headers = {
+    "X-RapidAPI-Host": 'currency-converter5.p.rapidapi.com',
+    "X-RapidAPI-Key": '346e65982amsh607d3f76e7dee05p14d6abjsna3e51c75da9e'
+  };
+  var datarate;
+  var currencyname;
+  final myController = TextEditingController();
+  @override
+  void initState() {
+    WidgetsFlutterBinding.ensureInitialized();
+    MobileAds.instance.initialize();
+    _bannerAd = BannerAd(
+      adUnitId: AdHelper.bannerAdUnitId,
+      request: AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isBannerAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          print('Failed to load a banner ad: ${err.message}');
+          _isBannerAdReady = false;
+          ad.dispose();
+        },
+      ),
+    );
+    _bannerAd.load();
+
+
+    // TODO: implement initState
+    super.initState();
+
+    datarate = 0;
+    currencyname = '';
+    secondCurrencyCodes = 'NGN';
+    currencycodes = 'USD';
+    currencyNamesPicker = 'Nigerian Naira';
+
+
+  }
+
+  @override
+  void dispose() {
+    myController.dispose();
+    _bannerAd.dispose();
+    super.dispose();
+  }
+
+  String amountData() {
+    String Amount = myController.text;
+    print(Amount);
+    return Amount;
+  }
+
+  Future<bool> progressIndicator()async{
+    dataBody = false;
+    return dataBody;
+  }
+  Future<bool> progressIndicatorTrue()async{
+    dataBody = true;
+    return dataBody;
+  }
+
+  Future<dynamic> get() async {
+    var amount = amountData();
+    var url = Uri.parse(
+        'https://currency-converter5.p.rapidapi.com/currency/convert?format=json&from=$currencycodes&to=$secondCurrencyCodes&amount=$amount');
+    var response = await http.get(url, headers: _headers);
+    print('Response status: ${response.statusCode}');
+    print(amount);
+
+    dataBody = true;
+
+    var data = response.body;
+
+
+    data = await jsonDecode(data)["rates"]["$secondCurrencyCodes"]
+        ["rate_for_amount"];
+
+    return data;
+  }
+
+  Future<dynamic> getCurrency() async {
+    var values = await amountData();
+    var url = Uri.parse(
+        'https://currency-converter5.p.rapidapi.com/currency/convert?format=json&from=$currencycodes&to=$secondCurrencyCodes&amount=$myController');
+    var response = await http.get(url, headers: _headers);
+    print('Response status: ${response.statusCode}');
+
+    var currencyData = response.body;
+
+    currencyData = await jsonDecode(currencyData)["rates"]
+        ["$secondCurrencyCodes"]["currency_name"];
+
+    print(amountnew);
+
+    return currencyData;
+  }
+
+  Future<dynamic> details() async {
+    var rate = await get();
+    print(rate);
+    return rate;
+  }
+
+  void currencyCode() async {
+    showCurrencyPicker(
+      context: context,
+      showFlag: true,
+      showCurrencyName: true,
+      showCurrencyCode: true,
+      onSelect: (Currency currency) {
+        setState(() {
+          currencycodes = currency.code;
+          getCurrency();
+          print('Selected currency: ${currency.code}');
+          progressIndicator();
+          setState((){});
+          getRate();
+          setState(() {
+            progressIndicatorTrue();
+          });
+        });
+      },
+    );
+  }
+
+  Future<dynamic> currencyTypeDetails() async {
+    var currency = await getCurrency();
+    print(currency);
+    currencyname = currency;
+    setState((){});
+    return currencyname;
+  }
+
+  Future<dynamic> getRate() async {
+    datarate = await details();
+
+    progressIndicatorTrue();
+    setState((){});
+    return datarate;
+  }
+
+
+  Future<dynamic> updateState() async {
+    currencyname = await currencyTypeDetails();
+    return currencyname;
+  }
+
+  void listener(AppLovinAdListener event) {
+    print(event);
+    if (event == AppLovinAdListener.onUserRewarded) {
+      print('👍get reward');
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    void currencyCodeNew() async {
+      showCurrencyPicker(
+        context: context,
+        showFlag: true,
+        showCurrencyName: true,
+        showCurrencyCode: true,
+        onSelect: (Currency currency) {
+           currency.name;
+          setState(() {
+            print('Select currency: ${currency.code}');
+            secondCurrencyCodes = currency.code;
+            currencyNamesPicker =currency.name;
+            print(secondCurrencyCodes);
+            print('Name of currency: $currencyNamesPicker');
+            getCurrency();
+
+          });
+           progressIndicator();
+           setState((){});
+           getRate();
+           setState(() {
+             progressIndicatorTrue();
+           });
+
+
+        },
+      );
+    }
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: const Color(0xFF213b4f),
+        body: Center(
+          child: ListView(
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SizedBox(
+                    height: 70,
+                  ),
+                  Text(
+                    'Currency Converter',
+                    style: GoogleFonts.lato(
+                        textStyle: const TextStyle(
+                          fontSize: 30,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        )),
+                  ),
+                  const SizedBox(
+                    height: 70,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Container(
+                            height: 345,
+                            decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(20)),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Exchange Rate',
+                                      style: GoogleFonts.lato(
+                                          textStyle: const TextStyle(
+                                            fontSize: 30,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                          )),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(
+                                  height: 28,
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$currencycodes',
+                                      style: GoogleFonts.lato(
+                                          textStyle: const TextStyle(
+                                            fontSize: 30,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                          )),
+                                    ),
+                                    const SizedBox(
+                                      width: 30,
+                                    ),
+                                    Text(
+                                      '$secondCurrencyCodes',
+                                      style: GoogleFonts.lato(
+                                          textStyle: const TextStyle(
+                                            fontSize: 30,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                          )),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(
+                                  height: 5,
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FloatingActionButton(
+                                      backgroundColor: Colors.redAccent,
+                                      onPressed: () {
+                                        setState(() {
+                                          currencyCode();
+
+                                          getCurrency();
+                                        });
+                                      },
+                                      child: const Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 20,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      width: 35,
+                                    ),
+                                    FloatingActionButton(
+                                      backgroundColor: Colors.green,
+                                      onPressed: () async {
+
+                                        setState(() {
+                                          currencyCodeNew();
+                                        });
+
+                                      },
+                                      child: const Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 20,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ), // FloatingButton
+                                const SizedBox(
+                                  height: 50,
+                                ),
+                                TextField(
+                                  controller: myController,
+                                  onChanged: (_)  async {
+
+                                    setState(()  {
+
+                                      myController.text;
+
+                                    });
+                                  },
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  decoration: const InputDecoration(
+                                      fillColor: Colors.white,
+                                      border: InputBorder.none,
+                                      hintText: "Enter Amount",
+                                      hintStyle: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 25,
+                                          color: Colors.grey)),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+
+                                    dataBody?  Text(
+                                      '$datarate',
+                                      style: GoogleFonts.lato(
+                                          textStyle: const TextStyle(
+                                            fontSize: 30,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w900,
+                                          )),
+                                    ) :  const SizedBox(height:20, width: 20,
+                                        child: CircularProgressIndicator(color: Colors.red,))
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$currencyNamesPicker',
+                                      style: GoogleFonts.lato(
+                                          textStyle: const TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w900,
+                                          )),
+                                    ),
+
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(30.0),
+                    child: GestureDetector(
+                      onTap: () async {
+                        progressIndicator();
+                        setState((){});
+                        await getRate();
+                        setState(() {
+                          progressIndicatorTrue();
+                        });
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        height: 77,
+                        width: double.infinity,
+                        child: Text(
+                          'Calculate',
+                          style: GoogleFonts.lato(
+                              textStyle: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              )),
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  BannerMaxView((AppLovinAdListener ? event ) => print(event), BannerAdSize.banner, "6ea150f29a3a999d"),
+
+
+                ],
+              )
+            ],
+
+          ),
+        ),
+      ),
+    );
+  }
+}
